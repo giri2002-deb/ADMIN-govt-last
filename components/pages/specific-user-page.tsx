@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import axios from "axios"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 type LandDetailKeys = `நிலம்${number}_சர்வே_எண்` | `நிலம்${number}_heh` | `நிலம்${number}_ac`
 type FarmerType = "OF" | "SF" | "MF"
 
@@ -58,7 +59,7 @@ type SelectedCrop = {
   acres: number
   eligibleAmount: number
   breakdown?: CropBreakdown
-    surveyNumber?: string  
+    surveyNumber?:  string[] 
 }
 
 // ✅ Gold Item structure with நிகர எடை and கலவு
@@ -178,10 +179,15 @@ const UserInformation: React.FC<UserInformationProps> = ({
         if (!/^\d+(\.\d{1,2})?$/.test(value)) return "செல்லுபடியாகும் எண் மதிப்பை உள்ளிடவும்";
         break;
       case "sdccb_kcc_கணக்கு_எண்":
-      case "sdccb_sb_கணக்கு_எண்":
-      case "pan_அட்டை_எண்":
-        if (value && !/^\d+$/.test(value)) return "எண் மதிப்புகள் மட்டுமே அனுமதிக்கப்படுகின்றன";
         break;
+      case "sdccb_sb_கணக்கு_எண்":
+        break;
+    case "pan_அட்டை_எண்":
+  if (value && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
+    return "சரியான PAN எண் உள்ளிடவும் (உதா: ABCDE1234F)";
+  }
+  break;
+
     }
     
     return "";
@@ -214,39 +220,67 @@ const UserInformation: React.FC<UserInformationProps> = ({
   };
 
   // Handle input change with validation and max length enforcement
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    
-    // Enforce max length for specific fields
-    let processedValue = value;
-    if (name === "ஆதார்_எண்") {
-      processedValue = value.replace(/\D/g, '').slice(0, 12); // Only numbers, max 12 digits
-    } else if (name === "கைபேசி_எண்") {
-      processedValue = value.replace(/\D/g, '').slice(0, 10); // Only numbers, max 10 digits
-    } else if (name === "உ_எண்" || name === "sdccb_kcc_கணக்கு_எண்" || 
-               name === "sdccb_sb_கணக்கு_எண்" || name === "pan_அட்டை_எண்") {
-      processedValue = value.replace(/\D/g, ''); // Only numbers
-    }
-    
-    // Create a synthetic event with the processed value
-    const syntheticEvent = {
-      ...e,
-      target: {
-        ...e.target,
-        value: processedValue,
-        name: name
-      }
-    };
-    
-    handleChange(syntheticEvent);
-    
-    // Validate field on change
-    const error = validateField(name, processedValue);
-    setFieldErrors(prev => ({
-      ...prev,
-      [name]: error
-    }));
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const { name, value } = e.target;
+
+  // Enforce max length for specific fields
+  let processedValue = value;
+
+  if (name === "ஆதார்_எண்") {
+    processedValue = value.replace(/\D/g, '').slice(0, 12); // Only numbers, max 12 digits
+  } else if (name === "கைபேசி_எண்") {
+    processedValue = value.replace(/\D/g, '').slice(0, 10); // Only numbers, max 10 digits
+  } else if (
+    name === "உ_எண்" || 
+    name === "sdccb_kcc_கணக்கு_எண்" || 
+    name === "sdccb_sb_கணக்கு_எண்"
+  ) {
+    processedValue = value.replace(/\D/g, ''); // Only numbers
+  } 
+ else if (name === "pan_அட்டை_எண்") {
+  let raw = value.toUpperCase(); // always uppercase
+  let processed = "";
+
+  // First 5 characters → letters only
+  if (raw.length <= 5) {
+    processed = raw.replace(/[^A-Z]/g, ""); 
+  } 
+  // 6–9 → digits only
+  else if (raw.length <= 9) {
+    processed = raw.slice(0, 5).replace(/[^A-Z]/g, "") + raw.slice(5).replace(/[^0-9]/g, "");
+  } 
+  // Last (10th) → letter only
+  else {
+    processed =
+      raw.slice(0, 5).replace(/[^A-Z]/g, "") + 
+      raw.slice(5, 9).replace(/[^0-9]/g, "") + 
+      raw.slice(9, 10).replace(/[^A-Z]/g, "");
+  }
+
+  processedValue = processed.slice(0, 10); // Max 10 chars
+}
+
+
+  // Create a synthetic event with the processed value
+  const syntheticEvent = {
+    ...e,
+    target: {
+      ...e.target,
+      value: processedValue,
+      name: name,
+    },
   };
+
+  handleChange(syntheticEvent);
+
+  // Validate field on change
+  const error = validateField(name, processedValue);
+  setFieldErrors((prev) => ({
+    ...prev,
+    [name]: error,
+  }));
+};
+
 
   // Handle search with validation - only validate U Number
   const handleSearchWithValidation = () => {
@@ -291,7 +325,16 @@ const UserInformation: React.FC<UserInformationProps> = ({
     { key: "sdccb_kcc_கணக்கு_எண்", label: "SDCCB KCC கணக்கு எண்", type: "text", required: false, pattern: "[0-9]*", title: "எண் மதிப்புகள் மட்டுமே", maxLength: null },
     { key: "sdccb_sb_கணக்கு_எண்", label: "SDCCB SB கணக்கு எண்", type: "text", required: false, pattern: "[0-9]*", title: "எண் மதிப்புகள் மட்டுமே", maxLength: null },
     { key: "society_sb_கணக்கு_எண்", label: "Society SB கணக்கு எண்", type: "text", required: false, maxLength: null },
-    { key: "pan_அட்டை_எண்", label: "PAN அட்டை எண்", type: "text", required: false, pattern: "[0-9]*", title: "எண் மதிப்புகள் மட்டுமே", maxLength: null },
+   { 
+  key: "pan_அட்டை_எண்", 
+  label: "PAN அட்டை எண்", 
+  type: "text", 
+  required: true, 
+  pattern: "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", 
+  title: "சரியான PAN எண் (உதா: ABCDE1234F) உள்ளிடவும்", 
+  maxLength: 10 
+},
+
     { key: "ரேஷன்_அட்டை_வகை", label: "ரேஷன் அட்டை வகை", type: "text", required: false, maxLength: null },
     { key: "ரேஷன்_அட்டை_எண்", label: "ரேஷன் அட்டை எண்", type: "text", required: false, maxLength: null },
     { key: "வாக்காளர்_அட்டை_எண்", label: "வாக்காளர் அட்டை எண்", type: "text", required: false, maxLength: null },
@@ -648,9 +691,10 @@ const CropDetails: React.FC<{
         acres: defaultAcres,
         eligibleAmount: defaultAcres * crop.motham,
         breakdown: computeBreakdown(crop, defaultAcres),
-        surveyNumber: "",
+        surveyNumbers: [], // Initialize as empty array
       }
-      setSelectedCrops([...selectedCrops, newCrop])
+      // Add new crop at the beginning of the array instead of the end
+      setSelectedCrops([newCrop, ...selectedCrops])
       notify("பயிர் சேர்க்கப்பட்டது", crop.name_of_crop, "success")
     }
   }
@@ -679,9 +723,33 @@ const CropDetails: React.FC<{
     setSelectedCrops(updated)
   }
 
-  const updateCropSurveyNumber = (index: number, surveyNumber: string) => {
+  const updateCropSurveyNumbers = (index: number, surveyNumbers: string[]) => {
     const updated = [...selectedCrops]
-    updated[index].surveyNumber = surveyNumber
+    updated[index].surveyNumbers = surveyNumbers
+    setSelectedCrops(updated)
+  }
+
+  const addSurveyNumberToCrop = (index: number, surveyNumber: string) => {
+    if (!surveyNumber) return
+    
+    const updated = [...selectedCrops]
+    // Ensure surveyNumbers exists and is an array
+    const currentSurveyNumbers = updated[index].surveyNumbers || []
+    
+    // Add survey number if it doesn't already exist
+    if (!currentSurveyNumbers.includes(surveyNumber)) {
+      updated[index].surveyNumbers = [...currentSurveyNumbers, surveyNumber]
+      setSelectedCrops(updated)
+    }
+  }
+
+  const removeSurveyNumberFromCrop = (index: number, surveyNumber: string) => {
+    const updated = [...selectedCrops]
+    // Ensure surveyNumbers exists and is an array
+    const currentSurveyNumbers = updated[index].surveyNumbers || []
+    
+    // Remove the survey number
+    updated[index].surveyNumbers = currentSurveyNumbers.filter(num => num !== surveyNumber)
     setSelectedCrops(updated)
   }
 
@@ -722,8 +790,9 @@ const CropDetails: React.FC<{
             <Button
               type="button"
               onClick={() => {
-                addCrop("1")
-                notify("பயிர் சேர்க்கப்பட்டது", "Default crop added", "success")
+                if (cropData.length > 0) {
+                  addCrop(cropData[0].crop_code.toString())
+                }
               }}
               className="bg-primary hover:bg-primary/90"
             >
@@ -735,116 +804,144 @@ const CropDetails: React.FC<{
 
         {selectedCrops.length > 0 && (
           <div className="space-y-4">
-            {selectedCrops.map((selectedCrop, index) => (
-              <div key={index} className="border-2 border-green-200 rounded-lg p-4 mb-4 bg-green-50">
-                <div className="flex justify-between items-start mb-4">
-                  <h4 className="font-semibold text-green-700">{selectedCrop.crop.name_of_crop}</h4>
-                  <Button variant="destructive" size="sm" onClick={() => removeCrop(index)} className="h-8 w-8 p-0">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">ஏக்கர் (Acres)</label>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      max={totalLandArea}
-                      value={selectedCrop.acres}
-                      onChange={(e) => updateCropAcres(index, Number.parseFloat(e.target.value) || 0)}
-                      className="border-green-300 focus:border-green-500"
-                    />
+            {selectedCrops.map((selectedCrop, index) => {
+              // Ensure surveyNumbers is always an array
+              const surveyNumbers = selectedCrop.surveyNumbers || []
+              
+              return (
+                <div key={index} className="border-2 border-green-200 rounded-lg p-4 mb-4 bg-green-50">
+                  <div className="flex justify-between items-start mb-4">
+                    <h4 className="font-semibold text-green-700">{selectedCrop.crop.name_of_crop}</h4>
+                    <Button variant="destructive" size="sm" onClick={() => removeCrop(index)} className="h-8 w-8 p-0">
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">சர்வே எண் (Survey Number)</label>
-                    <Select
-                      value={selectedCrop.surveyNumber || ""}
-                      onValueChange={(value) => updateCropSurveyNumber(index, value)}
-                    >
-                      <SelectTrigger className="border-green-300 focus:border-green-500">
-                        <SelectValue placeholder="சர்வே எண் தேர்ந்தெடுக்கவும்" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableSurveyNumbers.length > 0 ? (
-                          availableSurveyNumbers.map((surveyNum, idx) => (
-                            <SelectItem key={idx} value={surveyNum}>
-                              சர்வே எண்: {surveyNum}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">ஏக்கர் (Acres)</label>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        max={totalLandArea}
+                        value={selectedCrop.acres}
+                        onChange={(e) => updateCropAcres(index, Number.parseFloat(e.target.value) || 0)}
+                        className="border-green-300 focus:border-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">சர்வே எண் (Survey Number)</label>
+                      <Select
+                        value=""
+                        onValueChange={(value) => addSurveyNumberToCrop(index, value)}
+                      >
+                        <SelectTrigger className="border-green-300 focus:border-green-500">
+                          <SelectValue placeholder="சர்வே எண் தேர்ந்தெடுக்கவும்" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableSurveyNumbers.length > 0 ? (
+                            availableSurveyNumbers.map((surveyNum, idx) => (
+                              <SelectItem key={idx} value={surveyNum}>
+                                சர்வே எண்: {surveyNum}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-survey" disabled>
+                              முதலில் நில விவரங்களில் சர்வே எண் உள்ளிடவும்
                             </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-survey" disabled>
-                            முதலில் நில விவரங்களில் சர்வே எண் உள்ளிடவும்
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {selectedCrop.surveyNumber && (
-                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
-                        <p className="text-blue-700">
-                          <strong>தேர்ந்தெடுக்கப்பட்ட சர்வே எண்:</strong> {selectedCrop.surveyNumber}
-                        </p>
-                      </div>
-                    )}
+                          )}
+                        </SelectContent>
+                      </Select>
+                      
+                   
+{selectedCrop.surveyNumbers.length > 0 && (
+  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+    <p className="text-green-700 font-semibold mb-2 flex items-center">
+      <CheckCircle className="h-4 w-4 mr-2" />
+      தேர்ந்தெடுக்கப்பட்ட சர்வே எண்கள்:
+    </p>
+    <div className="flex flex-wrap gap-2">
+      {selectedCrop.surveyNumbers.map((surveyNum, idx) => (
+        <Badge key={idx} variant="secondary" className="bg-blue-100 text-blue-800 px-3 py-1">
+          {surveyNum}
+          <button
+            type="button"
+            onClick={() => removeSurveyNumberFromCrop(index, surveyNum)}
+            className="ml-2 text-red-500 hover:text-red-700"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      ))}
+    </div>
+    
+    {/* Auto-fill indicator */}
+    <div className="mt-2 text-xs text-green-600 flex items-center">
+      <CheckCircle className="h-3 w-3 mr-1" />
+      சர்வே எண்கள் தானாக நிரப்பப்பட்டது
+    </div>
+  </div>
+)}
+                    </div>
                   </div>
-                </div>
 
-                <div className="mt-4 p-4 rounded-lg border-2 border-primary/20 bg-muted/30">
-                  <div className="font-semibold mb-3 text-foreground">பயிர் செலவு விவரம் (Per-crop cost breakdown)</div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(() => {
-                      const b = selectedCrop.breakdown
-                      return (
-                        <div className="p-3 rounded border bg-background">
-                          <div className="font-semibold text-foreground">{selectedCrop.crop.name_of_crop}</div>
-                          <div className="text-xs text-muted-foreground mb-2">
-                            {selectedCrop.acres.toFixed(3)} ஏக்கர் (
-                            {selectedCrop.breakdown?.cents ?? Math.round(selectedCrop.acres * 100)} சென்ட்)
+                  <div className="mt-4 p-4 rounded-lg border-2 border-primary/20 bg-muted/30">
+                    <div className="font-semibold mb-3 text-foreground">பயிர் செலவு விவரம் (Per-crop cost breakdown)</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(() => {
+                        const b = selectedCrop.breakdown
+                        return (
+                          <div className="p-3 rounded border bg-background">
+                            <div className="font-semibold text-foreground">{selectedCrop.crop.name_of_crop}</div>
+                            <div className="text-xs text-muted-foreground mb-2">
+                              {selectedCrop.acres.toFixed(3)} ஏக்கர் (
+                              {selectedCrop.breakdown?.cents ?? Math.round(selectedCrop.acres * 100)} சென்ட்)
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                ரொக்கம்: <span className="font-semibold">₹{(b?.rokkam ?? 0).toFixed(2)}</span>
+                              </div>
+                              <div>
+                                தொழு உரம்: <span className="font-semibold">₹{(b?.thozhu_uram ?? 0).toFixed(2)}</span>
+                              </div>
+                              <div>
+                                உரம் 1: <span className="font-semibold">₹{(b?.uram_1 ?? 0).toFixed(2)}</span>
+                              </div>
+                              <div>
+                                உரம் 2: <span className="font-semibold">₹{(b?.uram_2 ?? 0).toFixed(2)}</span>
+                              </div>
+                              <div>
+                                பூச்சி மருந்து:{" "}
+                                <span className="font-semibold">₹{(b?.poochi_marundhu ?? 0).toFixed(2)}</span>
+                              </div>
+                              <div>
+                                வித்தை: <span className="font-semibold">₹{(b?.vithai ?? 0).toFixed(2)}</span>
+                              </div>
+                              <div className="col-span-2">
+                                மொத்தம்: <span className="font-bold">₹{(b?.motham ?? 0).toFixed(2)}</span>
+                              </div>
+                              <div className="col-span-2 text-[11px] text-muted-foreground">
+                                {"குறிப்பு: "} 1 ஏக்கர் = 100 சென்ட். {"சென்ட்-அடிப்படையில் கணக்கு: "} (ஒரு ஏக்கருக்கான விகிதங்கள் ×
+                                ஏக்கர்).
+                              </div>
+                              <div className="col-span-2 text-[11px] text-muted-foreground">
+                                {"பர் சென்ட் விகிதம்: "}
+                                {"ரொக்கம் ₹"}
+                                {(b?.perCentRate.rokkam ?? 0).toFixed(2)}, {"உரம்1 ₹"}
+                                {(b?.perCentRate.uram_1 ?? 0).toFixed(2)}, {"உரம்2 ₹"}
+                                {(b?.perCentRate.uram_2 ?? 0).toFixed(2)}
+                              </div>
+                            </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                              ரொக்கம்: <span className="font-semibold">₹{(b?.rokkam ?? 0).toFixed(2)}</span>
-                            </div>
-                            <div>
-                              தொழு உரம்: <span className="font-semibold">₹{(b?.thozhu_uram ?? 0).toFixed(2)}</span>
-                            </div>
-                            <div>
-                              உரம் 1: <span className="font-semibold">₹{(b?.uram_1 ?? 0).toFixed(2)}</span>
-                            </div>
-                            <div>
-                              உரம் 2: <span className="font-semibold">₹{(b?.uram_2 ?? 0).toFixed(2)}</span>
-                            </div>
-                            <div>
-                              பூச்சி மருந்து:{" "}
-                              <span className="font-semibold">₹{(b?.poochi_marundhu ?? 0).toFixed(2)}</span>
-                            </div>
-                            <div>
-                              வித்தை: <span className="font-semibold">₹{(b?.vithai ?? 0).toFixed(2)}</span>
-                            </div>
-                            <div className="col-span-2">
-                              மொத்தம்: <span className="font-bold">₹{(b?.motham ?? 0).toFixed(2)}</span>
-                            </div>
-                            <div className="col-span-2 text-[11px] text-muted-foreground">
-                              {"குறிப்பு: "} 1 ஏக்கர் = 100 சென்ட். {"சென்ட்-அடிப்படையில் கணக்கு: "} (ஒரு ஏக்கருக்கான விகிதங்கள் ×
-                              ஏக்கர்).
-                            </div>
-                            <div className="col-span-2 text-[11px] text-muted-foreground">
-                              {"பர் சென்ட் விகிதம்: "}
-                              {"ரொக்கம் ₹"}
-                              {(b?.perCentRate.rokkam ?? 0).toFixed(2)}, {"உரம்1 ₹"}
-                              {(b?.perCentRate.uram_1 ?? 0).toFixed(2)}, {"உரம்2 ₹"}
-                              {(b?.perCentRate.uram_2 ?? 0).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })()}
+                        )
+                      })()}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -1707,7 +1804,7 @@ const DocumentUpload: React.FC<{
               accept="image/*,.pdf"
               onChange={handleAadhaarChange}
               className="border-primary/20 focus:border-primary"
-              required
+             
             />
             {formData.aadhaar_preview && (
               <img
@@ -1716,9 +1813,7 @@ const DocumentUpload: React.FC<{
                 className="mt-2 h-32 w-full rounded shadow border-2 border-primary object-cover"
               />
             )}
-            {!formData.aadhaar_preview && (
-              <p className="text-xs text-red-500 mt-1">ஆதார் அட்டை பதிவேற்றம் கட்டாயம் (Aadhaar card is required)</p>
-            )}
+           
           </div>
           <div>
             <label className="block font-semibold mb-2 text-foreground">
@@ -1729,7 +1824,7 @@ const DocumentUpload: React.FC<{
               accept="image/*,.pdf"
               onChange={handleRationChange}
               className="border-primary/20 focus:border-primary"
-              required
+           
             />
             {formData.ration_preview && (
               <img
@@ -1738,9 +1833,7 @@ const DocumentUpload: React.FC<{
                 className="mt-2 h-32 w-full rounded shadow border-2 border-primary object-cover"
               />
             )}
-            {!formData.ration_preview && (
-              <p className="text-xs text-red-500 mt-1">ரேஷன் அட்டை பதிவேற்றம் கட்டாயம் (Ration card is required)</p>
-            )}
+          
           </div>
           <div>
             <label className="block font-semibold mb-2 text-foreground">
@@ -1751,7 +1844,7 @@ const DocumentUpload: React.FC<{
               accept="image/*,.pdf"
               onChange={handlePanChange}
               className="border-primary/20 focus:border-primary"
-              required
+             
             />
             {formData.pan_preview && (
               <img
@@ -1760,9 +1853,7 @@ const DocumentUpload: React.FC<{
                 className="mt-2 h-32 w-full rounded shadow border-2 border-primary object-cover"
               />
             )}
-            {!formData.pan_preview && (
-              <p className="text-xs text-red-500 mt-1">PAN அட்டை பதிவேற்றம் கட்டாயம் (PAN card is required)</p>
-            )}
+          
           </div>
           <div>
             <label className="block font-semibold mb-2 text-foreground">
@@ -1773,7 +1864,7 @@ const DocumentUpload: React.FC<{
               accept="image/*,.pdf"
               onChange={handleVoterDocumentChange}
               className="border-primary/20 focus:border-primary"
-              required
+             
             />
             {formData.voter_preview && (
               <img
@@ -1782,9 +1873,7 @@ const DocumentUpload: React.FC<{
                 className="mt-2 h-32 w-full rounded shadow border-2 border-primary object-cover"
               />
             )}
-            {!formData.voter_preview && (
-              <p className="text-xs text-red-500 mt-1">வாக்காளர் அட்டை பதிவேற்றம் கட்டாயம் (Voter ID is required)</p>
-            )}
+           
           </div>
         </div>
 
@@ -1821,7 +1910,7 @@ const DocumentUpload: React.FC<{
     </Card>
   )
 }
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 
 // Main Component
 export default function FarmerRegistrationForm() {
@@ -2333,34 +2422,44 @@ const searchUser = async () => {
         }
 
         // crops - with survey number autofill
-        if (existingUserData.loanDetails?.selectedCrops && Array.isArray(existingUserData.loanDetails.selectedCrops)) {
-          const cropsToRestore = existingUserData.loanDetails.selectedCrops
-            .map((savedCrop: any) => {
-              const matchingCrop = cropData.find(
-                (crop) =>
-                  crop.crop_code === savedCrop.crop?.crop_code || crop.name_of_crop === savedCrop.crop?.name_of_crop,
-              )
-              if (matchingCrop) {
-                const acres = savedCrop.acres || 0
-                const breakdown: CropBreakdown =
-                  savedCrop.breakdown && typeof savedCrop.breakdown === "object"
-                    ? savedCrop.breakdown
-                    : computeBreakdown(matchingCrop, acres)
-                
-                return {
-                  crop: matchingCrop,
-                  acres,
-                  eligibleAmount: savedCrop.eligibleAmount || acres * (matchingCrop.motham || 0),
-                  breakdown,
-                  surveyNumber: savedCrop.surveyNumber || ""
-                } as SelectedCrop
-              }
-              return null
-            })
-            .filter(Boolean) as SelectedCrop[]
-          setSelectedCrops(cropsToRestore)
-        }
+      // In the searchUser function, update the crops restoration section:
+if (existingUserData.loanDetails?.selectedCrops && Array.isArray(existingUserData.loanDetails.selectedCrops)) {
+  // Inside searchUser, in crops restore:
+const cropsToRestore = existingUserData.loanDetails.selectedCrops
+  .map((savedCrop: any) => {
+    const matchingCrop = cropData.find(
+      (crop) => crop.crop_code === savedCrop.crop?.crop_code || crop.name_of_crop === savedCrop.crop?.name_of_crop,
+    );
+    if (matchingCrop) {
+      const acres = savedCrop.acres || 0;
+      const breakdown: CropBreakdown =
+        savedCrop.breakdown && typeof savedCrop.breakdown === "object"
+          ? savedCrop.breakdown
+          : computeBreakdown(matchingCrop, acres);
+      // Ensure surveyNumbers is always an array:
+      let surveyNumbers: string[] = [];
+      if (Array.isArray(savedCrop.surveyNumbers)) {
+        surveyNumbers = savedCrop.surveyNumbers.filter((s) => !!s);
+      } else if (typeof savedCrop.surveyNumbers === "string") {
+        surveyNumbers = savedCrop.surveyNumbers
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter((s: string) => !!s);
+      }
+      return {
+        crop: matchingCrop,
+        acres,
+        eligibleAmount: savedCrop.eligibleAmount || acres * (matchingCrop.motham || 0),
+        breakdown,
+        surveyNumbers, // Always array
+      } as SelectedCrop;
+    }
+    return null;
+  })
+  .filter(Boolean) as SelectedCrop[];
 
+  setSelectedCrops(cropsToRestore)
+}
         // Rest of your existing code remains the same...
         // KCCAH
         if (existingUserData.loanDetails?.selectedKccahLoan) {
@@ -2618,10 +2717,8 @@ const searchUser = async () => {
   // File uploads
   // Prefer a global override or NEXT_PUBLIC var when available (for deployments), else fallback to localhost.
   // Note: NEXT_PUBLIC_* vars only work if set at build time; globalThis.BACKEND_URL can be set at runtime in the browser console for testing.
-  const BACKEND_URL =
-    (typeof globalThis !== "undefined" && (globalThis as any).BACKEND_URL) ||
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    "http://localhost:5000"
+ 
+    
   const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     fileField: keyof FormDataType,
@@ -2638,7 +2735,7 @@ const searchUser = async () => {
     const formDataUpload = new FormData()
     formDataUpload.append("file", file)
     try {
-      const res = await fetch(`${BACKEND_URL}/api/upload/${docType}`, {
+      const res = await fetch(`${API_URL}/api/upload/${docType}`, {
         method: "POST",
         body: formDataUpload,
       })
@@ -2649,7 +2746,7 @@ const searchUser = async () => {
       if (data.path) {
         setFormData((prev) => ({
           ...prev,
-          [previewField]: `${BACKEND_URL}${data.path}`,
+          [previewField]: `${API_URL}${data.path}`,
         }))
       }
     } catch (error) {
@@ -2709,7 +2806,7 @@ const handleFriendPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) =>
   // submit
   async function pingBackend() {
     try {
-      const res = await fetch(`${BACKEND_URL}/health`)
+      const res = await fetch(`${API_URL}/health`)
       if (!res.ok) return false
       const j = await res.json().catch(() => ({}))
       return !!j
@@ -2751,18 +2848,18 @@ const handleFriendPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) =>
   }
   
   // Check if required documents are uploaded
-  const requiredDocuments = [
-    { key: "aadhaar_preview", name: "ஆதார் அட்டை" },
-    { key: "ration_preview", name: "ரேஷன் அட்டை" },
-    { key: "pan_preview", name: "PAN அட்டை" },
-    { key: "voter_preview", name: "வாக்காளர் அட்டை" }
-  ]
+  // const requiredDocuments = [
+  //   { key: "aadhaar_preview", name: "ஆதார் அட்டை" },
+  //   { key: "ration_preview", name: "ரேஷன் அட்டை" },
+  //   { key: "pan_preview", name: "PAN அட்டை" },
+  //   { key: "voter_preview", name: "வாக்காளர் அட்டை" }
+  // ]
   
-  requiredDocuments.forEach(doc => {
-    if (!formData[doc.key]) {
-      errors[doc.key] = `${doc.name} பதிவேற்றம் தேவையானது`
-    }
-  })
+  // requiredDocuments.forEach(doc => {
+  //   if (!formData[doc.key]) {
+  //     errors[doc.key] = `${doc.name} பதிவேற்றம் தேவையானது`
+  //   }
+  // })
   
   if (Object.keys(errors).length > 0) {
     const errorList = Object.entries(errors)
@@ -2780,10 +2877,7 @@ const handleFriendPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) =>
           "பிறந்த_தேதி": "பிறந்த தேதி",
           "பங்குத்_தொகை": "பங்குத் தொகை",
           "user_photo": "பயனர் படம்",
-          "aadhaar_preview": "ஆதார் அட்டை",
-          "ration_preview": "ரேஷன் அட்டை",
-          "pan_preview": "PAN அட்டை",
-          "voter_preview": "வாக்காளர் அட்டை"
+         
         }
         
         return `${fieldNames[field] || field}: ${msg}`
@@ -2800,7 +2894,7 @@ const handleFriendPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     (async () => {
       const ok = await pingBackend()
       if (!ok) {
-        notify("Backend not reachable", `Could not reach ${BACKEND_URL}. Check server and BACKEND_URL.`, "destructive")
+        notify("Backend not reachable", `Could not reach ${API_URL}. Check server and BACKEND_URL.`, "destructive")
       }
 
       notify(
@@ -3113,7 +3207,7 @@ friendDetails: {
       // Decide endpoint:
       // - If we know the user already exists (userFound === true), always UPDATE
       // - Otherwise, CREATE
-      const endpoint = userFound || isUpdate ? `${BACKEND_URL}/submit-user-data` : `${BACKEND_URL}/submit-user-data`
+      const endpoint = userFound || isUpdate ? `${API_URL}/submit-user-data` : `${API_URL}/submit-user-data`
       try {
         const response = await axios.post(endpoint, basePayload)
         notify(
