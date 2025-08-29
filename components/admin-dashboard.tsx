@@ -2,7 +2,7 @@
 
 
 import { useState } from "react"
-import {
+import { Scale,
   LayoutDashboard,
   Users,
   User,
@@ -17,7 +17,7 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
+  X,ClipboardList ,Banknote,createLucideIcon,CalendarRange
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,14 +48,16 @@ const navigationItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "all-users", label: "All Users", icon: Users },
   { id: "specific-user", label: "Specific User", icon: User },
+    { id: "ther", label: "தீர்மானம்", icon: Scale },
   { id: "forms", label: "Forms", icon: FileText },
-  { id: "slips", label: "Slips", icon: Receipt },
+ 
   
-  { id: "ther", label: "THER", icon: Upload },
-  { id: "cvr", label: "CVR", icon: Upload },
-  { id: "disbursement", label: "DISBUR", icon: Upload },
+ 
+  { id: "cvr", label: "CVR", icon: ClipboardList  },
+  { id: "disbursement", label: "DISBUR", icon: Banknote },
    { id: "loanledger", label: "Loanledger", icon: Upload },
-    { id: "month", label: "Month", icon: Upload },
+    { id: "slips", label: "Slips", icon: Receipt },
+    { id: "month", label: "Month", icon: CalendarRange },
     {id:"finance particulars", label:"finance particulars", icon: Coins},
 ]
 
