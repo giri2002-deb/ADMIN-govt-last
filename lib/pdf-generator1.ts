@@ -13,7 +13,7 @@ export async function generatePDF(
     const [{ jsPDF }, html2canvas] = await Promise.all([import("jspdf"), import("html2canvas").then((m) => m.default)])
 
     // A4 portrait in pixels (72 dpi ≈ 794 × 1123 px)
-    const pageWidth = 816
+    const pageWidth = 1500
     const pageHeight = 2000
     const pdf = new jsPDF({
       orientation: "p",

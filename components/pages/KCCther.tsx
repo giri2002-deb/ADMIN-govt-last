@@ -2223,7 +2223,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
         <Database className="w-4 h-4 mr-2" /> Back to Data Selection
       </Button>
       <Button onClick={() => setIsEditing(!isEditing)} variant={isEditing ? "destructive" : "default"}>
-        {isEditing ? <X className="w-4 h-4 mr-2" /> : <Edit3 className="w-4 h-4 mr-2" />}
+        {isEditing ? <X className="w-4 h-4 mr-2downloadPDF" /> : <Edit3 className="w-4 h-4 mr-2" />}
         {isEditing ? "Stop Editing" : "Edit Mode"}
       </Button>
       <Button onClick={() => setShowFilters(!showFilters)} variant="outline">

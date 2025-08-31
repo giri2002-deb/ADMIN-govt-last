@@ -66,7 +66,7 @@ const LoanReport: React.FC = () => {
             transition={{ repeat: Infinity, duration: 1.5 }}
             className="text-pink-600 text-7xl mb-3 drop-shadow-lg"
           >
-            🐖
+             🐐
           </motion.div>
           <h2 className="text-2xl font-semibold text-green-600 mb-2">
             KCC AH

@@ -161,7 +161,6 @@ const UserInformation: React.FC<UserInformationProps> = ({
     if (!value?.trim() && key !== "ஜாதி") return "இந்த புலம் தேவையானது";
     
     switch(key) {
-      
       case "பெயர்":
       case "தகபெயர்":
       case "கிராமம்":
@@ -179,15 +178,17 @@ const UserInformation: React.FC<UserInformationProps> = ({
         if (!/^\d+(\.\d{1,2})?$/.test(value)) return "செல்லுபடியாகும் எண் மதிப்பை உள்ளிடவும்";
         break;
       case "sdccb_kcc_கணக்கு_எண்":
-        break;
       case "sdccb_sb_கணக்கு_எண்":
+      case "society_sb_கணக்கு_எண்":
+      case "ரேஷன்_அட்டை_எண்":
+      case "வாக்காளர்_அட்டை_எண்":
+        if (value && !/^\d+$/.test(value)) return "எண் மதிப்புகள் மட்டுமே அனுமதிக்கப்படுகின்றன";
         break;
-    case "pan_அட்டை_எண்":
-  if (value && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
-    return "சரியான PAN எண் உள்ளிடவும் (உதா: ABCDE1234F)";
-  }
-  break;
-
+      case "pan_அட்டை_எண்":
+        if (value && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
+          return "சரியான PAN எண் உள்ளிடவும் (உதா: ABCDE1234F)";
+        }
+        break;
     }
     
     return "";
@@ -198,7 +199,7 @@ const UserInformation: React.FC<UserInformationProps> = ({
     const errors: Record<string, string> = {};
     const requiredFields = [
       "உ_எண்", "பெயர்", "தகபெயர்", "முகவரி", "கிராமம்", "வட்டம்", 
-      "ஆதார்_எண்", "கைபேசி_எண்", "பிறந்த_தேதி", "பங்குத்_தொகை"
+      "ஆதார்_எண்", "கைபேசி_எண்", "பிறந்த_தேதி", "பங்குத்_தொகை", "pan_அட்டை_எண்"
     ];
 
     requiredFields.forEach(field => {
@@ -207,7 +208,11 @@ const UserInformation: React.FC<UserInformationProps> = ({
     });
 
     // Validate optional fields if they have values
-    const optionalFields = ["ஜாதி", "sdccb_kcc_கணக்கு_எண்", "sdccb_sb_கணக்கு_எண்", "pan_அட்டை_எண்"];
+    const optionalFields = [
+      "ஜாதி", "sdccb_kcc_கணக்கு_எண்", "sdccb_sb_கணக்கு_எண்", 
+      "society_sb_கணக்கு_எண்", "ரேஷன்_அட்டை_வகை", "ரேஷன்_அட்டை_எண்", 
+      "வாக்காளர்_அட்டை_எண்"
+    ];
     optionalFields.forEach(field => {
       if (formData[field]) {
         const error = validateField(field, formData[field]);
@@ -220,67 +225,75 @@ const UserInformation: React.FC<UserInformationProps> = ({
   };
 
   // Handle input change with validation and max length enforcement
-const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  const { name, value } = e.target;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
 
-  // Enforce max length for specific fields
-  let processedValue = value;
+    // Enforce max length and format for specific fields
+    let processedValue = value;
 
-  if (name === "ஆதார்_எண்") {
-    processedValue = value.replace(/\D/g, '').slice(0, 12); // Only numbers, max 12 digits
-  } else if (name === "கைபேசி_எண்") {
-    processedValue = value.replace(/\D/g, '').slice(0, 10); // Only numbers, max 10 digits
-  } else if (
-    name === "உ_எண்" || 
-    name === "sdccb_kcc_கணக்கு_எண்" || 
-    name === "sdccb_sb_கணக்கு_எண்"
-  ) {
-    processedValue = value.replace(/\D/g, ''); // Only numbers
-  } 
- else if (name === "pan_அட்டை_எண்") {
-  let raw = value.toUpperCase(); // always uppercase
-  let processed = "";
+    if (name === "ஆதார்_எண்") {
+      processedValue = value.replace(/\D/g, '').slice(0, 12); // Only numbers, max 12 digits
+    } else if (name === "கைபேசி_எண்") {
+      processedValue = value.replace(/\D/g, '').slice(0, 10); // Only numbers, max 10 digits
+    } else if (
+      name === "உ_எண்" || 
+      name === "sdccb_kcc_கணக்கு_எண்" || 
+      name === "sdccb_sb_கணக்கு_எண்" ||
+      name === "society_sb_கணக்கு_எண்" ||
+      name === "ரேஷன்_அட்டை_எண்" ||
+      name === "வாக்காளர்_அட்டை_எண்"
+    ) {
+      processedValue = value.replace(/\D/g, ''); // Only numbers
+    } else if (name === "pan_அட்டை_எண்") {
+      let raw = value.toUpperCase(); // always uppercase
+      let processed = "";
 
-  // First 5 characters → letters only
-  if (raw.length <= 5) {
-    processed = raw.replace(/[^A-Z]/g, ""); 
-  } 
-  // 6–9 → digits only
-  else if (raw.length <= 9) {
-    processed = raw.slice(0, 5).replace(/[^A-Z]/g, "") + raw.slice(5).replace(/[^0-9]/g, "");
-  } 
-  // Last (10th) → letter only
-  else {
-    processed =
-      raw.slice(0, 5).replace(/[^A-Z]/g, "") + 
-      raw.slice(5, 9).replace(/[^0-9]/g, "") + 
-      raw.slice(9, 10).replace(/[^A-Z]/g, "");
-  }
+      // First 5 characters → letters only
+      if (raw.length <= 5) {
+        processed = raw.replace(/[^A-Z]/g, ""); 
+      } 
+      // 6–9 → digits only
+      else if (raw.length <= 9) {
+        processed = raw.slice(0, 5).replace(/[^A-Z]/g, "") + raw.slice(5).replace(/[^0-9]/g, "");
+      } 
+      // Last (10th) → letter only
+      else {
+        processed =
+          raw.slice(0, 5).replace(/[^A-Z]/g, "") + 
+          raw.slice(5, 9).replace(/[^0-9]/g, "") + 
+          raw.slice(9, 10).replace(/[^A-Z]/g, "");
+      }
 
-  processedValue = processed.slice(0, 10); // Max 10 chars
-}
+      processedValue = processed.slice(0, 10); // Max 10 chars
+    } else if (
+      name === "கிராமம்" || 
+      name === "வட்டம்" || 
+      name === "ஜாதி" ||
+      name === "ரேஷன்_அட்டை_வகை"
+    ) {
+      // Allow only Tamil and English letters with spaces
+      processedValue = value.replace(/[^\p{L}\s]/gu, '');
+    }
 
+    // Create a synthetic event with the processed value
+    const syntheticEvent = {
+      ...e,
+      target: {
+        ...e.target,
+        value: processedValue,
+        name: name,
+      },
+    };
 
-  // Create a synthetic event with the processed value
-  const syntheticEvent = {
-    ...e,
-    target: {
-      ...e.target,
-      value: processedValue,
-      name: name,
-    },
+    handleChange(syntheticEvent);
+
+    // Validate field on change
+    const error = validateField(name, processedValue);
+    setFieldErrors((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
   };
-
-  handleChange(syntheticEvent);
-
-  // Validate field on change
-  const error = validateField(name, processedValue);
-  setFieldErrors((prev) => ({
-    ...prev,
-    [name]: error,
-  }));
-};
-
 
   // Handle search with validation - only validate U Number
   const handleSearchWithValidation = () => {
@@ -324,20 +337,11 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaE
     { key: "கைபேசி_எண்", label: "கைபேசி எண்", type: "text", required: true, pattern: "[0-9]{10}", title: "10-இலக்க எண்", maxLength: 10 },
     { key: "sdccb_kcc_கணக்கு_எண்", label: "SDCCB KCC கணக்கு எண்", type: "text", required: false, pattern: "[0-9]*", title: "எண் மதிப்புகள் மட்டுமே", maxLength: null },
     { key: "sdccb_sb_கணக்கு_எண்", label: "SDCCB SB கணக்கு எண்", type: "text", required: false, pattern: "[0-9]*", title: "எண் மதிப்புகள் மட்டுமே", maxLength: null },
-    { key: "society_sb_கணக்கு_எண்", label: "Society SB கணக்கு எண்", type: "text", required: false, maxLength: null },
-   { 
-  key: "pan_அட்டை_எண்", 
-  label: "PAN அட்டை எண்", 
-  type: "text", 
-  required: true, 
-  pattern: "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", 
-  title: "சரியான PAN எண் (உதா: ABCDE1234F) உள்ளிடவும்", 
-  maxLength: 10 
-},
-
-    { key: "ரேஷன்_அட்டை_வகை", label: "ரேஷன் அட்டை வகை", type: "text", required: false, maxLength: null },
-    { key: "ரேஷன்_அட்டை_எண்", label: "ரேஷன் அட்டை எண்", type: "text", required: false, maxLength: null },
-    { key: "வாக்காளர்_அட்டை_எண்", label: "வாக்காளர் அட்டை எண்", type: "text", required: false, maxLength: null },
+    { key: "society_sb_கணக்கு_எண்", label: "Society SB கணக்கு எண்", type: "text", required: false, pattern: "[0-9]*", title: "எண் மதிப்புகள் மட்டுமே", maxLength: null },
+    { key: "pan_அட்டை_எண்", label: "PAN அட்டை எண்", type: "text", required: true, pattern: "^[A-Z]{5}[0-9]{4}[A-Z]{1}$", title: "சரியான PAN எண் (உதா: ABCDE1234F) உள்ளிடவும்", maxLength: 10 },
+    { key: "ரேஷன்_அட்டை_வகை", label: "ரேஷன் அட்டை வகை", type: "text", required: false, pattern: "[\\p{L} ]*", title: "தமிழ் அல்லது ஆங்கில எழுத்துக்கள் மட்டுமே", maxLength: null },
+    { key: "ரேஷன்_அட்டை_எண்", label: "ரேஷன் அட்டை எண்", type: "text", required: false, pattern: "[0-9]*", title: "எண் மதிப்புகள் மட்டுமே", maxLength: null },
+    { key: "வாக்காளர்_அட்டை_எண்", label: "வாக்காளர் அட்டை எண்", type: "text", required: false, pattern: "[0-9]*", title: "எண் மதிப்புகள் மட்டுமே", maxLength: null },
   ];
 
   return (
@@ -632,6 +636,45 @@ const LandDetails: React.FC<{
   )
 }
 var a ;
+const getAvailableAcresBySurveyNumber = (formData: FormDataType): Record<string, number> => {
+  const surveyAcres: Record<string, number> = {};
+  
+  // Collect all survey numbers and their acreage
+  Array.from({ length: 20 }, (_, i) => {
+    const surveyKey = `நிலம்${i + 1}_சர்வே_எண்` as LandDetailKeys;
+    const acKey = `நிலம்${i + 1}_ac` as LandDetailKeys;
+    
+    const surveyNumber = (formData[surveyKey] as string)?.trim();
+    const acres = Number.parseFloat((formData[acKey] as string) || "0") || 0;
+    
+    if (surveyNumber && acres > 0) {
+      if (surveyAcres[surveyNumber]) {
+        surveyAcres[surveyNumber] += acres;
+      } else {
+        surveyAcres[surveyNumber] = acres;
+      }
+    }
+  });
+  
+  return surveyAcres;
+};
+
+// Add this function to calculate already allocated acres for each survey number
+const getAllocatedAcresBySurveyNumber = (selectedCrops: SelectedCrop[]): Record<string, number> => {
+  const allocatedAcres: Record<string, number> = {};
+  
+  selectedCrops.forEach(crop => {
+    crop.surveyNumbers?.forEach(surveyNum => {
+      if (allocatedAcres[surveyNum]) {
+        allocatedAcres[surveyNum] += crop.acres;
+      } else {
+        allocatedAcres[surveyNum] = crop.acres;
+      }
+    });
+  });
+  
+  return allocatedAcres;
+};
 // Crop Details Component
 const CropDetails: React.FC<{
   selectedCrops: SelectedCrop[]
@@ -685,7 +728,7 @@ const CropDetails: React.FC<{
   const addCrop = (cropId: string) => {
     const crop = cropData.find((c) => c.crop_code.toString() === cropId)
     if (crop && selectedCrops.length < 5) {
-      const defaultAcres = 0.5
+      const defaultAcres = 0
       const newCrop: SelectedCrop = {
         crop,
         acres: defaultAcres,
@@ -704,24 +747,57 @@ const CropDetails: React.FC<{
     setSelectedCrops(selectedCrops.filter((_, i) => i !== index))
   }
 
-  const updateCropAcres = (index: number, acres: number) => {
-    const updated = [...selectedCrops]
-    const maxAllowed = totalLandArea - (totalSelectedAcres - updated[index].acres)
-    const clamped = Math.max(0, Math.min(acres, maxAllowed))
-
+const updateCropAcres = (index: number, acres: number) => {
+  const updated = [...selectedCrops];
+  const maxAllowed = totalLandArea - (totalSelectedAcres - updated[index].acres);
+  
+  // Check if this crop has survey numbers assigned
+  if (updated[index].surveyNumbers && updated[index].surveyNumbers.length > 0) {
+    // Calculate total available acres from all assigned survey numbers
+    const availableAcresBySurvey = getAvailableAcresBySurveyNumber(formData);
+    const allocatedAcresBySurvey = getAllocatedAcresBySurveyNumber(selectedCrops);
+    
+    let totalAvailableFromSurveys = 0;
+    
+    // Calculate total available acres from all selected survey numbers
+    updated[index].surveyNumbers.forEach(surveyNum => {
+      const availableAcres = availableAcresBySurvey[surveyNum] || 0;
+      const alreadyAllocated = (allocatedAcresBySurvey[surveyNum] || 0) - updated[index].acres;
+      totalAvailableFromSurveys += Math.max(0, availableAcres - alreadyAllocated);
+    });
+    
+    // Use the most restrictive limit (survey acreage or total land)
+    const finalMaxAllowed = Math.min(maxAllowed, totalAvailableFromSurveys);
+    const clamped = Math.max(0, Math.min(acres, finalMaxAllowed));
+    
+    if (acres > finalMaxAllowed) {
+      notify(
+        "எச்சரிக்கை",
+        `அதிகபட்சம் ${finalMaxAllowed.toFixed(3)} ஏக்கர் மட்டுமே அனுமதிக்கப்படுகிறது (தேர்ந்தெடுக்கப்பட்ட சர்வே எண்களின் மொத்த ஏக்கர்: ${totalAvailableFromSurveys.toFixed(3)})`,
+        "destructive"
+      );
+    }
+    
+    updated[index].acres = clamped;
+  } else {
+    // No survey numbers assigned, use the general limit
+    const clamped = Math.max(0, Math.min(acres, maxAllowed));
+    
     if (acres > maxAllowed) {
       notify(
         "எச்சரிக்கை",
-        `Maximum ${maxAllowed.toFixed(3)} acres allowed (Total land: ${totalLandArea} acres)`,
-        "destructive",
-      )
+        `அதிகபட்சம் ${maxAllowed.toFixed(3)} ஏக்கர் மட்டுமே அனுமதிக்கப்படுகிறது (மொத்த நிலம்: ${totalLandArea} ஏக்கர்)`,
+        "destructive"
+      );
     }
-
-    updated[index].acres = clamped
-    updated[index].eligibleAmount = clamped * (updated[index].crop?.motham || 0)
-    updated[index].breakdown = computeBreakdown(updated[index].crop, clamped)
-    setSelectedCrops(updated)
+    
+    updated[index].acres = clamped;
   }
+  
+  updated[index].eligibleAmount = updated[index].acres * (updated[index].crop?.motham || 0);
+  updated[index].breakdown = computeBreakdown(updated[index].crop, updated[index].acres);
+  setSelectedCrops(updated);
+};
 
   const updateCropSurveyNumbers = (index: number, surveyNumbers: string[]) => {
     const updated = [...selectedCrops]
@@ -729,20 +805,53 @@ const CropDetails: React.FC<{
     setSelectedCrops(updated)
   }
 
-  const addSurveyNumberToCrop = (index: number, surveyNumber: string) => {
-    if (!surveyNumber) return
-    
-    const updated = [...selectedCrops]
-    // Ensure surveyNumbers exists and is an array
-    const currentSurveyNumbers = updated[index].surveyNumbers || []
-    
-    // Add survey number if it doesn't already exist
-    if (!currentSurveyNumbers.includes(surveyNumber)) {
-      updated[index].surveyNumbers = [...currentSurveyNumbers, surveyNumber]
-      setSelectedCrops(updated)
-    }
+const addSurveyNumberToCrop = (index: number, surveyNumber: string) => {
+  if (!surveyNumber) return;
+  
+  const updated = [...selectedCrops];
+  const currentSurveyNumbers = updated[index].surveyNumbers || [];
+  
+  // Check if this crop already uses this survey number
+  if (currentSurveyNumbers.includes(surveyNumber)) {
+    notify("எச்சரிக்கை", "இந்த சர்வே எண் ஏற்கனவே சேர்க்கப்பட்டுள்ளது", "destructive");
+    return;
   }
-
+  
+  // Calculate available acres for this survey number
+  const availableAcresBySurvey = getAvailableAcresBySurveyNumber(formData);
+  const allocatedAcresBySurvey = getAllocatedAcresBySurveyNumber(selectedCrops);
+  
+  const availableAcres = availableAcresBySurvey[surveyNumber] || 0;
+  const alreadyAllocated = allocatedAcresBySurvey[surveyNumber] || 0;
+  const remainingAcres = availableAcres - alreadyAllocated;
+  
+  // Check if there's enough remaining acreage for this survey number
+  if (remainingAcres >= updated[index].acres) {
+    updated[index].surveyNumbers = [...currentSurveyNumbers, surveyNumber];
+    
+    // Calculate total acres from all selected survey numbers
+    const totalSurveyAcres = updated[index].surveyNumbers.reduce((total, sn) => {
+      return total + (availableAcresBySurvey[sn] || 0);
+    }, 0);
+    
+    // Update crop acres to match total survey acres if needed
+    if (totalSurveyAcres < updated[index].acres) {
+      updated[index].acres = totalSurveyAcres;
+      updated[index].eligibleAmount = totalSurveyAcres * (updated[index].crop?.motham || 0);
+      updated[index].breakdown = computeBreakdown(updated[index].crop, totalSurveyAcres);
+    }
+    
+    setSelectedCrops(updated);
+    notify("சர்வே எண் சேர்க்கப்பட்டது", surveyNumber, "success");
+  } else {
+    notify(
+      "பிழை", 
+      `சர்வே எண் ${surveyNumber} இல் ${remainingAcres.toFixed(3)} ஏக்கர் மட்டுமே கிடைக்கும். 
+      தற்போதைய பயிருக்கு ${updated[index].acres.toFixed(3)} ஏக்கர் தேவை.`,
+      "destructive"
+    );
+  }
+};
   const removeSurveyNumberFromCrop = (index: number, surveyNumber: string) => {
     const updated = [...selectedCrops]
     // Ensure surveyNumbers exists and is an array
@@ -816,6 +925,7 @@ const CropDetails: React.FC<{
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
+                  
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
@@ -3411,6 +3521,7 @@ friendDetails: {
   
 
   return (
+    
     <div className="min-h-screen bg-background p-4">
       <CookiesPanel />
       <form
