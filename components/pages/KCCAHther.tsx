@@ -779,7 +779,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const downloadPDF = async () => {
   setIsLoading(true)
   try {
-    const { generatePDF } = await import("../../utils/pdf-generator")
+    const { generatePDF } = await import("../../utils/pdf-generatorah")
 
     // Get the CURRENT selected user details
     const selectedDetails = getSelectedUserDetails()

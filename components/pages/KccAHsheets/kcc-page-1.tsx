@@ -188,7 +188,7 @@ localStorage.setItem("kccahmembers",(membersToRender.length).toString())
     console.log("ogs"+membersToRender[0])
   }, [selectedUsers])
   return (
-    <div className="w-[210mm] min-h-[297mm] bg-white p-6 mx-auto text-black" style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}>
+    <div className="w-[950px] h-[2000px] bg-white p-6 mx-auto text-black" style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}>
       {/* Header Section */}
       <div className="flex justify-between items-start mb-4">
         <div className="text-blue-600 font-bold text-sm">கூட்டுறவே!</div>
@@ -404,7 +404,7 @@ localStorage.setItem("kccahmembers",(membersToRender.length).toString())
       {/* Totals Row */}
       <tr className="bg-red-100">
         <td colSpan={6} className="border border-black p-1 text-center font-bold text-red-600">
-          ஆக் மொத்தம்
+          ஆக மொத்தம்
         </td>
         <td className="border border-black p-1 text-right font-bold text-red-600">
           {totalVithai.toLocaleString()}
