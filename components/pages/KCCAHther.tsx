@@ -935,7 +935,7 @@ const renderDataTable = () => (
                 <th className="border border-gray-300 p-2">
                   <Checkbox
                     onCheckedChange={(checked) =>
-                      setSelectedMembers(checked ? filteredData.map((m) => m.id) : [])
+                      setSelectedMembers(checked ? filteredData1.map((m) => m.id) : [])
                     }
                     checked={filteredData1.length > 0 && selectedMembers.length === filteredData1.length}
                   />
