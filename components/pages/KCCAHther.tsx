@@ -1,5 +1,6 @@
 "use client"
-
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input'; 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -893,182 +894,185 @@ const downloadPDF = async () => {
     }
   };
 
-  // Render the data table for server preview with selection checkboxes
-  const renderDataTable = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle>Server Data Preview - Select Members to Add</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center p-8">
-            <RefreshCw className="w-6 h-6 animate-spin mr-2" />
-            <span>Loading data from server...</span>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border border-gray-300">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="border border-gray-300 p-2">
+const [searchTerm, setSearchTerm] = useState("");
+// Filter data based on search term
+
+const filteredData1 = samplePreviewData.filter(member => {
+  if (!member.serialNo) return false;
+  
+  // Convert both to string for comparison
+  const serialNoStr = member.serialNo.toString();
+  const searchTermStr = searchTerm.toString();
+  
+  return serialNoStr.toLowerCase().includes(searchTermStr.toLowerCase());
+});
+
+const renderDataTable = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle>Server Data Preview - Select Members to Add</CardTitle>
+      <div className="flex items-center mt-4">
+        <Search className="w-5 h-5 mr-2 text-gray-500" />
+        <Input
+          placeholder="Search by உ_எண்..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+    </CardHeader>
+    <CardContent>
+      {isLoading ? (
+        <div className="flex items-center justify-center p-8">
+          <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+          <span>Loading data from server...</span>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border border-gray-300">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="border border-gray-300 p-2">
+                  <Checkbox
+                    onCheckedChange={(checked) =>
+                      setSelectedMembers(checked ? filteredData.map((m) => m.id) : [])
+                    }
+                    checked={filteredData1.length > 0 && selectedMembers.length === filteredData1.length}
+                  />
+                </th>
+                <th className="border border-gray-300 p-2">உ_எண்</th>
+                <th className="border border-gray-300 p-2">உறுப்பினர் விவரங்கள்</th>
+                <th className="border border-gray-300 p-2">பயிர் வகை</th>
+                <th className="border border-gray-300 p-2">நிலம் பரப்பு (Ac)</th>
+                <th className="border border-gray-300 p-2">வகை</th>
+                <th className="border border-gray-300 p-2">வகைப்பாடு</th>
+                <th className="border border-gray-300 p-2">தொகை விவரம்</th>
+                <th className="border border-gray-300 p-2">தங்கம்</th>
+                <th className="border border-gray-300 p-2">சொத்து</th>
+                <th className="border border-gray-300 p-2">நண்பர்</th>
+                <th className="border border-gray-300 p-2">ஆதார் எண்</th>
+                <th className="border border-gray-300 p-2">கணக்கு எண்</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData1.map((member) => (
+                <tr key={member.id} className="hover:bg-gray-50">
+                  <td className="border border-gray-300 p-2 text-center">
                     <Checkbox
-                      onCheckedChange={(checked) =>
-                        setSelectedMembers(checked ? samplePreviewData.map((m) => m.id) : [])
-                      }
-                      checked={samplePreviewData.length > 0 && selectedMembers.length === samplePreviewData.length}
+                      checked={selectedMembers.includes(member.id)}
+                      onCheckedChange={(checked) => handleCheckboxChange(member.id, checked as boolean)}
                     />
-                  </th>
-                  <th className="border border-gray-300 p-2">உ_எண்</th>
-                  <th className="border border-gray-300 p-2">உறுப்பினர் விவரங்கள்</th>
-                  <th className="border border-gray-300 p-2">கடன் வகை</th>
-                  <th className="border border-gray-300 p-2">நிலம் பரப்பு (Ac)</th>
-                  <th className="border border-gray-300 p-2">வகை</th>
-                  <th className="border border-gray-300 p-2">வகைப்பாடு</th>
-                  <th className="border border-gray-300 p-2">தொகை விவரம்</th>
-                  <th className="border border-gray-300 p-2">தங்கம்</th>
-                  <th className="border border-gray-300 p-2">சொத்து</th>
-                  <th className="border border-gray-300 p-2">நண்பர்</th>
-                  <th className="border border-gray-300 p-2">ஆதார் எண்</th>
-                  <th className="border border-gray-300 p-2">கணக்கு எண்</th>
+                  </td>
+                  <td className="border border-gray-300 p-2 text-center">{member.serialNo || "--"}</td>
+                  <td className="border border-gray-300 p-2">
+                    <div className="flex flex-col">
+                      <span className="font-medium">{member.memberName}</span>
+                      {member.fatherName && <span className="text-xs text-gray-600">தகப்பர்: {member.fatherName}</span>}
+                      {member.phoneNo && <span className="text-xs text-gray-600">☎ {member.phoneNo}</span>}
+                    </div>
+                  </td>
+                  <td className="border border-gray-300 p-2">{member.category}</td>
+                  <td className="border border-gray-300 p-2 text-center">{member.landArea.toFixed(3)}</td>
+                  <td className="border border-gray-300 p-2 text-center">
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        member.farmerType === "MF"
+                          ? "bg-blue-100"
+                          : member.farmerType === "SF"
+                            ? "bg-green-100"
+                            : "bg-orange-100"
+                      }`}
+                    >
+                      {member.farmerType}
+                    </span>
+                  </td>
+                  <td className="border border-gray-300 p-2 text-center">
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        member.classification === "SC"
+                          ? "bg-purple-100"
+                          : member.classification === "ST"
+                            ? "bg-red-100"
+                            : member.classification === "Others"
+                              ? "bg-yellow-100"
+                              : "bg-gray-100"
+                      }`}
+                    >
+                      {member.classification}
+                    </span>
+                  </td>
+                  <td className="border border-gray-300 p-2">₹{member.amount.toLocaleString("en-IN")}</td>
+                  <td className="border border-gray-300 p-2 text-xs">
+                    {member.goldDetails?.hasGold ? (
+                      <div className="bg-yellow-50 p-1 rounded">
+                        <div className="font-semibold text-yellow-800">
+                          Items: {member.goldDetails.totalItems || 0}
+                        </div>
+                        <div className="text-yellow-700">
+                          ₹{(member.goldDetails.totalValue || 0).toLocaleString("en-IN")}
+                        </div>
+                        {member.goldDetails.totalWeight > 0 && (
+                          <div className="text-yellow-600">{member.goldDetails.totalWeight}g</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">No Gold</span>
+                    )}
+                  </td>
+                  <td className="border border-gray-300 p-2 text-xs">
+                    {member.ownProperty?.hasPropertyData ? (
+                      <div className="bg-blue-50 p-1 rounded">
+                        <div className="font-semibold text-blue-800">
+                          Value: ₹{(member.ownProperty.value || 0).toLocaleString("en-IN")}
+                        </div>
+                        {member.ownProperty.mortgageDetails?.hasMortgageData && (
+                          <div className="text-blue-700">
+                            Mortgage: ₹
+                            {(member.ownProperty.mortgageDetails.mortgageAmount || 0).toLocaleString("en-IN")}
+                          </div>
+                        )}
+                        {member.ownProperty.description && (
+                          <div className="text-blue-600 truncate" title={member.ownProperty.description}>
+                            {member.ownProperty.description.substring(0, 20)}...
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">No Property</span>
+                    )}
+                  </td>
+                  <td className="border border-gray-300 p-2 text-xs">
+                    {member.friendDetails?.hasData ? (
+                      <div className="bg-green-50 p-1 rounded">
+                        <div className="font-semibold text-green-800">{member.friendDetails.name || "Name N/A"}</div>
+                        <div className="text-green-700">ID: {member.friendDetails.uNumber || "N/A"}</div>
+                        {member.friendDetails.phone && (
+                          <div className="text-green-600">📞 {member.friendDetails.phone}</div>
+                        )}
+                        {member.friendDetails.acre && (
+                          <div className="text-green-600">🌾 {member.friendDetails.acre} acres</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">No Friend</span>
+                    )}
+                  </td>
+                  <td className="border border-gray-300 p-2">{member.aadhaarNo || "--"}</td>
+                  <td className="border border-gray-300 p-2">{member.accountNo || "--"}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {samplePreviewData.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50">
-                    <td className="border border-gray-300 p-2 text-center">
-                      <Checkbox
-                        checked={selectedMembers.includes(member.id)}
-                        onCheckedChange={(checked) => handleCheckboxChange(member.id, checked as boolean)}
-                      />
-                    </td>
-                    <td className="border border-gray-300 p-2 text-center">{member.serialNo || "--"}</td>
-                    <td className="border border-gray-300 p-2">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{member.memberName}</span>
-                        {member.fatherName && <span className="text-xs text-gray-600">தகப்பர்: {member.fatherName}</span>}
-                        {member.phoneNo && <span className="text-xs text-gray-600">☎ {member.phoneNo}</span>}
-                      </div>
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-blue-800">{member.loanType || "கடன் வகை இல்லை"}</span>
-                        {member.selectedKccahLoan?.["திட்ட_அளவு"] && (
-                          <span className="text-xs text-gray-600">திட்டம்: {member.selectedKccahLoan["திட்ட_அளவு"]}</span>
-                        )}
-                        <span className="text-xs text-green-600">{member.category}</span>
-                      </div>
-                    </td>
-                    <td className="border border-gray-300 p-2 text-center">{member.landArea.toFixed(3)}</td>
-                    <td className="border border-gray-300 p-2 text-center">
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          member.farmerType === "MF"
-                            ? "bg-blue-100"
-                            : member.farmerType === "SF"
-                              ? "bg-green-100"
-                              : "bg-orange-100"
-                        }`}
-                      >
-                        {member.farmerType}
-                      </span>
-                    </td>
-                    <td className="border border-gray-300 p-2 text-center">
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          member.classification === "SC"
-                            ? "bg-purple-100"
-                            : member.classification === "ST"
-                              ? "bg-red-100"
-                              : member.classification === "Others"
-                                ? "bg-yellow-100"
-                                : "bg-gray-100"
-                        }`}
-                      >
-                        {member.classification}
-                      </span>
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-green-700">₹{member.amount.toLocaleString("en-IN")}</span>
-                        {member.selectedKccahLoan && (
-                          <div className="text-xs">
-                            <div>விதை: ₹{(member.selectedKccahLoan["விதை"] || 0).toLocaleString("en-IN")}</div>
-                            <div>ரொக்கம்: ₹{(member.selectedKccahLoan["ரொக்கம்"] || member.selectedKccahLoan.dynamicrokkam || 0).toLocaleString("en-IN")}</div>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="border border-gray-300 p-2 text-xs">
-                      {member.goldDetails?.hasGold ? (
-                        <div className="bg-yellow-50 p-1 rounded">
-                          <div className="font-semibold text-yellow-800">
-                            Items: {member.goldDetails.totalItems || 0}
-                          </div>
-                          <div className="text-yellow-700">
-                            ₹{(member.goldDetails.totalValue || 0).toLocaleString("en-IN")}
-                          </div>
-                          {member.goldDetails.totalWeight > 0 && (
-                            <div className="text-yellow-600">{member.goldDetails.totalWeight}g</div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">No Gold</span>
-                      )}
-                    </td>
-                    <td className="border border-gray-300 p-2 text-xs">
-                      {member.ownProperty?.hasPropertyData ? (
-                        <div className="bg-blue-50 p-1 rounded">
-                          <div className="font-semibold text-blue-800">
-                            Value: ₹{(member.ownProperty.value || 0).toLocaleString("en-IN")}
-                          </div>
-                          {member.ownProperty.mortgageDetails?.hasMortgageData && (
-                            <div className="text-blue-700">
-                              Mortgage: ₹
-                              {(member.ownProperty.mortgageDetails.mortgageAmount || 0).toLocaleString("en-IN")}
-                            </div>
-                          )}
-                          {member.ownProperty.description && (
-                            <div className="text-blue-600 truncate" title={member.ownProperty.description}>
-                              {member.ownProperty.description.substring(0, 20)}...
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">No Property</span>
-                      )}
-                    </td>
-                    <td className="border border-gray-300 p-2 text-xs">
-                      {member.friendDetails?.hasData ? (
-                        <div className="bg-green-50 p-1 rounded">
-                          <div className="font-semibold text-green-800">{member.friendDetails.name || "Name N/A"}</div>
-                          <div className="text-green-700">ID: {member.friendDetails.uNumber || "N/A"}</div>
-                          {member.friendDetails.phone && (
-                            <div className="text-green-600">📞 {member.friendDetails.phone}</div>
-                          )}
-                          {member.friendDetails.acre && (
-                            <div className="text-green-600">🌾 {member.friendDetails.acre} acres</div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">No Friend</span>
-                      )}
-                    </td>
-                    <td className="border border-gray-300 p-2">{member.aadhaarNo || "--"}</td>
-                    <td className="border border-gray-300 p-2">{member.accountNo || "--"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {samplePreviewData.length === 0 && !isLoading && (
-              <div className="text-center p-8 text-gray-500">
-                No data available. Click "Refresh Data" to fetch from server.
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
+              ))}
+            </tbody>
+          </table>
+          {filteredData1.length === 0 && !isLoading && (
+            <div className="text-center p-8 text-gray-500">
+              {searchTerm ? `No results found for "${searchTerm}"` : 'No data available. Click "Refresh Data" to fetch from server.'}
+            </div>
+          )}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+);
 
   // Calculate summary totals with helper function
   const totals = calculateKCCTotals(filteredData.members)
